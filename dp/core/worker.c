@@ -53,6 +53,9 @@
 #include <net/udp.h>
 #include <net/ethernet.h>
 
+// AFP fake work
+#include <fake_work.h>
+
 #define PREEMPT_VECTOR 0xf2
 
 __thread ucontext_t uctx_main;
@@ -69,9 +72,12 @@ extern int swapcontext_very_fast(ucontext_t *ouctx, ucontext_t *uctx);
 extern void dune_apic_eoi();
 extern int dune_register_intr_handler(int vector, dune_intr_cb cb);
 
+#define AFP_PAYLOAD_SIZE 8*6
+
 struct response {
-        uint64_t runNs;
-        uint64_t genNs;
+	char buff[AFP_PAYLOAD_SIZE];
+        //uint64_t runNs;
+        //uint64_t genNs;
 };
 
 struct request {
@@ -107,6 +113,17 @@ static void test_handler(struct dune_tf *tf)
         swapcontext_fast_to_control(cont, &uctx_main);
 }
 
+static void
+afp_server(void *buff)
+{
+	uint64_t *data = buff;
+
+	//uint32_t type = data[3];
+	uint32_t ns_sleep = data[5];
+	
+	fake_work_ns(ns_sleep);
+}
+
 /**
  * generic_work - generic function acting as placeholder for application-level
  *                work
@@ -120,26 +137,10 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
 
         struct ip_tuple * id = (struct ip_tuple *) ((uint64_t) msw_id << 32 | lsw_id);
         void * data = (void *)((uint64_t) msw << 32 | lsw);
-        int ret;
 
-        struct request * req = (struct request *) data;
-
-        uint64_t i = 0;
-        do {
-                asm volatile ("nop");
-                i++;
-        } while ( i / 0.233 < req->runNs);
+	afp_server(data);
 
         asm volatile ("cli":::);
-        struct response * resp = mempool_alloc(&percpu_get(response_pool));
-        if (!resp) {
-                log_warn("Cannot allocate response buffer\n");
-                finished = true;
-                swapcontext_very_fast(cont, &uctx_main);
-        }
-
-        resp->genNs = req->genNs;
-        resp->runNs = req->runNs;
         struct ip_tuple new_id = {
                 .src_ip = id->dst_ip,
                 .dst_ip = id->src_ip,
@@ -147,8 +148,7 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
                 .dst_port = id->src_port
         };
 
-        ret = udp_send((void *)resp, sizeof(struct response), &new_id,
-                       (uint64_t) resp);
+        int ret = udp_send_one((void *)data, sizeof(struct response), &new_id);
         if (ret)
                 log_warn("udp_send failed with error %d\n", ret);
 
