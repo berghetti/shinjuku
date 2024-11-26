@@ -25,14 +25,24 @@
 
 #include <stdint.h>
 
+//struct Request {
+//    uint64_t runNs;
+//    uint64_t genNs;
+//};
+
 struct Request {
-    uint64_t runNs;
+    uint64_t id;
     uint64_t genNs;
+    uint64_t recv_time;
+    uint64_t type;
+    uint64_t db_key;
+    uint64_t runNs; // sleep_ns
 };
 
 struct Response {
-    uint64_t runNs;
+    uint64_t runNs; 
     uint64_t genNs;
+    uint64_t pad[4]; // afp payload size
 };
 
 #endif
