@@ -286,7 +286,7 @@ PortTrimodalBatchClient::PortTrimodalBatchClient(std::string serverip, int serve
 	hints.ai_flags = AI_PASSIVE;
 
 	std::stringstream portstr;
-	portstr << (serverport + 1);
+	portstr << (serverport);
 
 	const char* serverStr = serverip.size() ? serverip.c_str() : nullptr;
 
@@ -404,7 +404,7 @@ PortBimodalBatchClient::PortBimodalBatchClient(std::string serverip, int serverp
 	hints.ai_flags = AI_PASSIVE;
 
 	std::stringstream portstr;
-	portstr << (serverport + 1);
+	portstr << (serverport );
 
 	const char* serverStr = serverip.size() ? serverip.c_str() : nullptr;
 
@@ -643,7 +643,7 @@ BimodalDoubleLatencyClient::BimodalDoubleLatencyClient(std::string serverip,
 	hints.ai_flags = AI_PASSIVE;
 
 	std::stringstream portstr;
-	portstr << (serverport + 1);
+	portstr << (serverport );
 
 	const char* serverStr = serverip.size() ? serverip.c_str() : nullptr;
 
@@ -769,7 +769,7 @@ PortTrimodalLatencyClient::PortTrimodalLatencyClient(std::string serverip,
 	hints.ai_flags = AI_PASSIVE;
 
 	std::stringstream portstr;
-	portstr << (serverport + 1);
+	portstr << (serverport );
 
 	const char* serverStr = serverip.size() ? serverip.c_str() : nullptr;
 
@@ -925,7 +925,7 @@ PortBimodalLatencyClient::PortBimodalLatencyClient(std::string serverip,
 	hints.ai_flags = AI_PASSIVE;
 
 	std::stringstream portstr;
-	portstr << (serverport + 1);
+	portstr << (serverport );
 
 	const char* serverStr = serverip.size() ? serverip.c_str() : nullptr;
 
