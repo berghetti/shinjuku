@@ -258,7 +258,10 @@ class PortBimodalLatencyClient : public LatencyClient {
 		uint64_t work1_;
 		uint64_t work2_;
 		int serverFd2;
-		std::vector<uint64_t> sjrnTimes2;
+		struct type_latency {uint64_t type; uint64_t latency;};
+		//std::vector<uint64_t> sjrnTimes2;
+		std::vector<type_latency> result;
+
 
 	public:
 		PortBimodalLatencyClient(std::string serverip, int serverport,
@@ -269,7 +272,7 @@ class PortBimodalLatencyClient : public LatencyClient {
 		bool send(Request* req);
 		bool recv(Response* resp);
 		void finiReq(Response* resp);
-		void dumpStats();
+		void dumpStats(double secs_duration);
 };
 
 class ExponentialLatencyClient : public LatencyClient {

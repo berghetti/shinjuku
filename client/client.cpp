@@ -581,6 +581,7 @@ Request* LatencyClient::startReq() {
 
 	startedReqs++;
 	req->runNs = work;
+	req->type = 1;
 	req->genNs = dist->nextArrivalNs();
 
 	while (getCurNs() < req->genNs);
@@ -955,6 +956,7 @@ Request* PortBimodalLatencyClient::startReq() {
 	startedReqs++;
 	req->runNs = work_dist->workNs();
 	req->genNs = dist->nextArrivalNs();
+	req->type = (req->runNs == work1_) ? 1 : 2;
 
 	while (getCurNs() < req->genNs);
 
@@ -968,29 +970,34 @@ void PortBimodalLatencyClient::finiReq(Response* resp) {
 	sjrnTimes.push_back(sjrn);
 	if (resp->runNs == 0)
 		resp->runNs = 1;
-	sjrnTimes2.push_back(sjrn / resp->runNs);
-
+	//sjrnTimes2.push_back(sjrn / resp->runNs);
+	result.push_back({resp->type, sjrn});
 }
 
-void PortBimodalLatencyClient::dumpStats() {
-	std::ofstream out(output_file, std::ios::out | std::ios::binary);
-	int reqs = sjrnTimes.size();
+void PortBimodalLatencyClient::dumpStats( double secs_duration) {
+	std::ofstream out(output_file, std::ios::out);
+	int reqs = result.size();
 
-	for (int r = 0; r < reqs; ++r) {
-		out.write(reinterpret_cast<const char*>(&sjrnTimes[r]),
-			sizeof(sjrnTimes[r]));
+	double drop = 0.1;
+	int r = reqs * drop;
+
+	for (; r < reqs; ++r) {
+		//out.write(reinterpret_cast<const char*>(&sjrnTimes[r]),
+		//	sizeof(sjrnTimes[r]));
+		out << result[r].type << '\t' << result[r].latency << std::endl;
 	}
 	out.close();
 
-	std::ofstream out_ratios(output_file.append(".ratios"),
-		                 std::ios::out | std::ios::binary);
-	reqs = sjrnTimes2.size();
-
-	for (int r = 0; r < reqs; ++r) {
-		out_ratios.write(reinterpret_cast<const char*>(&sjrnTimes2[r]),
-			         sizeof(sjrnTimes2[r]));
-	}
-	out_ratios.close();
+	uint64_t rps_offered = startedReqs / secs_duration;
+	
+	std::ofstream out_rate(output_file.append("_rate"), std::ios::out);
+	out_rate << "offered\treached\ttot_tx\ttot_rx\tdropped" << std::endl;
+	out_rate << rps_offered << '\t' \
+		 << 0 << '\t' \
+		 << startedReqs << '\t' \
+		 << reqs << '\t' \
+		 << startedReqs - reqs << std::endl;
+	out_rate.close();
 }
 
 bool PortBimodalLatencyClient::send(Request* req) {
@@ -1022,6 +1029,7 @@ bool PortBimodalLatencyClient::recv(Response* resp) {
 	    break;
         recvd = ::recv(serverFd2, reinterpret_cast<void*>(resp), len, 0);
     } while (recvd == -1);
+
     return (recvd == len);
 }
 

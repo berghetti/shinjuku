@@ -39,10 +39,12 @@ struct Request {
     uint64_t runNs; // sleep_ns
 };
 
-struct Response {
-    uint64_t runNs; 
-    uint64_t genNs;
-    uint64_t pad[4]; // afp payload size
-};
+#define Response Request
+
+//struct Response {
+//    uint64_t runNs; 
+//    uint64_t genNs;
+//    uint64_t pad[4]; // afp payload size
+//};
 
 #endif
