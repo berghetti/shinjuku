@@ -128,7 +128,7 @@ static inline void handle_networker(uint64_t cur_time)
                 for (i = 0; i < networker_pointers.cnt; i++) {
                         ret = context_alloc(&cont);
                         if (unlikely(ret)) {
-                                log_warn("Cannot allocate context\n");
+                                //log_warn("Cannot allocate context\n");
                                 mbuf_enqueue(&mqueue, (struct mbuf *) networker_pointers.pkts[i]);
                                 continue;
                         }
