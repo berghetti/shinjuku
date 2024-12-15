@@ -81,10 +81,6 @@ struct response {
         //uint64_t genNs;
 };
 
-struct request {
-        uint64_t runNs;
-        uint64_t genNs;
-};
 
 /**
  * response_init - allocates global response datastore
