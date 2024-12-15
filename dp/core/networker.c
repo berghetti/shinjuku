@@ -47,21 +47,31 @@
  */
 void do_networking(void)
 {
-        int i, num_recv;
+        int i, j, num_recv;
+	rqueue.head = NULL;
         while(1) {
                 eth_process_poll();
                 num_recv = eth_process_recv();
-                if (num_recv == 0)
-                        continue;
+		if (num_recv == 0)
+			continue;
                 while (networker_pointers.cnt != 0);
                 for (i = 0; i < networker_pointers.free_cnt; i++) {
-                        mbuf_free(networker_pointers.pkts[i]);
+			struct request * req = networker_pointers.reqs[i];
+			for (j = 0; j < req->pkts_length; j++) {
+				mbuf_free(req->mbufs[j]);
+			}
+			mempool_free(&request_mempool, req);
                 }
                 networker_pointers.free_cnt = 0;
+		j = 0;
                 for (i = 0; i < num_recv; i++) {
-                        networker_pointers.pkts[i] = recv_mbufs[i];
-                        networker_pointers.types[i] = (uint8_t) recv_type[i];
+			struct request * req = rq_update(&rqueue, recv_mbufs[i]);
+			if (req) {
+				networker_pointers.reqs[j] = req;
+				networker_pointers.types[j] = (uint8_t) recv_type[i];
+				j++;
+			}
                 }
-                networker_pointers.cnt = num_recv;
+                networker_pointers.cnt = j;
         }
 }

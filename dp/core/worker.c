@@ -56,6 +56,7 @@
 // AFP fake work
 #include <fake_work.h>
 
+
 #define PREEMPT_VECTOR 0xf2
 
 __thread ucontext_t uctx_main;
@@ -90,6 +91,7 @@ struct request {
  */
 int response_init(void)
 {
+
         return mempool_create_datastore(&response_datastore, 128000,
                                         sizeof(struct response), 1,
                                         MEMPOOL_DEFAULT_CHUNKSIZE,
@@ -197,7 +199,7 @@ static inline void handle_new_packet(void)
         int ret;
         void * data;
         struct ip_tuple * id;
-        struct mbuf * pkt = (struct mbuf *) dispatcher_requests[cpu_nr_].mbuf;
+        struct mbuf * pkt = (struct mbuf *) dispatcher_requests[cpu_nr_].req->mbufs[0];
         parse_packet(pkt, &data, &id);
         if (data) {
                 uint32_t msw = ((uint64_t) data & 0xFFFFFFFF00000000) >> 32;
@@ -250,8 +252,8 @@ static inline void finish_request(void)
                         dispatcher_requests[cpu_nr_].timestamp;
         worker_responses[cpu_nr_].type = \
                         dispatcher_requests[cpu_nr_].type;
-        worker_responses[cpu_nr_].mbuf = \
-                        dispatcher_requests[cpu_nr_].mbuf;
+        worker_responses[cpu_nr_].req = \
+                        dispatcher_requests[cpu_nr_].req;
         worker_responses[cpu_nr_].rnbl = cont;
         worker_responses[cpu_nr_].category = CONTEXT;
         if (finished) {
