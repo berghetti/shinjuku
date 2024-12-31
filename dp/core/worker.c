@@ -53,6 +53,9 @@
 #include <net/udp.h>
 #include <net/ethernet.h>
 
+// AFP fake work
+#include <fake_work.h>
+
 #define TYPE_REQ 1
 #define TYPE_RES 0
 #define PREEMPT_VECTOR 0xf2
@@ -99,6 +102,18 @@ static void test_handler(struct dune_tf *tf)
         swapcontext_fast_to_control(cont, &uctx_main);
 }
 
+static void
+afp_server(void *buff)
+{
+	uint64_t *data = buff;
+
+	//uint32_t type = data[3];
+	uint32_t ns_sleep = data[5];
+  //printf("%d\n", ns_sleep);
+	
+	fake_work_ns(ns_sleep);
+}
+
 /**
  * generic_work - generic function acting as placeholder for application-level
  *                work
@@ -114,28 +129,9 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
         void * data = (void *)((uint64_t) msw << 32 | lsw);
         int ret;
 
-        struct message * req = (struct message *) data;
-
-        uint64_t i = 0;
-        do {
-                asm volatile ("nop");
-                i++;
-        } while ( i / 0.58 < req->runNs);
+        afp_server(data);
 
         asm volatile ("cli":::);
-        struct message resp;
-	resp.genNs = req->genNs;
-	resp.runNs = req->runNs;
-	resp.type = TYPE_RES;
-
-	int j;
-	for (j = 0; j < 3; j++) {
-		if (dispatcher_requests[cpu_nr_].type == j) {
-			resp.queue_length[j] = queue_length[j] - 1;
-		} else {
-			resp.queue_length[j] = queue_length[j];
-		}
-	}
 
         struct ip_tuple new_id = {
                 .src_ip = id->dst_ip,
@@ -144,7 +140,7 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
                 .dst_port = id->src_port
         };
 
-        ret = udp_send_one((void *)&resp, sizeof(struct message), &new_id);
+        ret = udp_send_one(data, sizeof(struct message), &new_id);
         if (ret)
                 log_warn("udp_send failed with error %d\n", ret);
 

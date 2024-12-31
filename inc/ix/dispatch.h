@@ -56,15 +56,18 @@ struct mempool request_mempool __attribute((aligned(64)));
 struct mempool_datastore rq_datastore;
 struct mempool rq_mempool __attribute((aligned(64)));
 
+#define AFP_PAYLOAD_SIZE (sizeof(uint64_t)*6)
+
 struct message {
-        uint16_t type;
-        uint16_t seq_num;
-	uint32_t queue_length[3];
-        uint16_t client_id;
-        uint32_t req_id;
-        uint32_t pkts_length;
-        uint64_t runNs;
-        uint64_t genNs;
+  char data[AFP_PAYLOAD_SIZE];
+  //uint16_t type;
+  //uint16_t seq_num;
+	//uint32_t queue_length[3];
+  //uint16_t client_id;
+  //uint32_t req_id;
+  //uint32_t pkts_length;
+  //uint64_t runNs;
+  //uint64_t genNs;
 } __attribute__((__packed__));
 
 struct request
@@ -292,81 +295,91 @@ static inline int smart_tskq_dequeue(struct task_queue * tq, void ** rnbl_ptr,
 static inline struct request * rq_update(struct request_queue * rq, struct mbuf * pkt)
 {
 	// Quickly parse packet without doing checks
-        struct eth_hdr * ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
-        struct ip_hdr *  iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
-        int hdrlen = iphdr->header_len * sizeof(uint32_t);
+  struct eth_hdr * ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+  struct ip_hdr *  iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
+  int hdrlen = iphdr->header_len * sizeof(uint32_t);
 	struct udp_hdr * udphdr = mbuf_nextd_off(iphdr, struct udp_hdr *,
                                                  hdrlen);
 	// Get data and udp header
 	void * data = mbuf_nextd(udphdr, void *);
-	struct message * msg = (struct message *) data;
-	uint16_t type = msg->type;
-        uint16_t seq_num = msg->seq_num;
-        uint16_t client_id = msg->client_id;
-        uint32_t req_id = msg->req_id;
-        uint32_t pkts_length = msg->pkts_length / sizeof(struct message);
-	if (pkts_length == 1) {
-		struct request * req = mempool_alloc(&request_mempool);
-		req->type = type;
-		req->pkts_length = 1;
-		req->mbufs[0] = pkt;
-		return req;
-	}
+	uint64_t *afp_data = data;
+  struct request * req = mempool_alloc(&request_mempool);
+  if (unlikely(!req)) {
+            mbuf_free(pkt);
+            return NULL;
+  }
+	req->type = afp_data[3] - 1; // afp client req type start from 1
+	req->pkts_length = 1;
+	req->mbufs[0] = pkt;
+	return req;
+	//struct message * msg = (struct message *) data;
+	//uint16_t type = msg->type;
+  //      uint16_t seq_num = msg->seq_num;
+  //      uint16_t client_id = msg->client_id;
+  //      uint32_t req_id = msg->req_id;
+  //      uint32_t pkts_length = msg->pkts_length / sizeof(struct message);
+	//if (pkts_length == 1) {
+	//	struct request * req = mempool_alloc(&request_mempool);
+	//	req->type = type;
+	//	req->pkts_length = 1;
+	//	req->mbufs[0] = pkt;
+	//	return req;
+	//}
 
-        if (!rq->head) {
-                struct request_cell * rc = mempool_alloc(&rq_mempool);
-                rc->pkts_remaining = pkts_length - 1;
-                rc->client_id = client_id;
-                rc->req_id = req_id;
-                rc->req = mempool_alloc(&request_mempool);
-                rc->req->mbufs[seq_num] = pkt;
-                rc->req->pkts_length = pkts_length;
-                rc->req->type = type;
-                rc->next = NULL;
-                rc->prev = NULL;
-                rq->head = rc;
-                return NULL;
-        }
-	struct request_cell * cur = rq->head;
-        while (cur != NULL) {
-                if (cur->client_id == client_id && cur->req_id == req_id) {
-                        cur->req->mbufs[seq_num] = pkt;
-                        cur->pkts_remaining--;
-			if (cur->pkts_remaining == 0) {
-				struct request * req = cur->req;
-				if (cur->prev == NULL) {
-					rq->head = cur->next;
-					if (rq->head != NULL)
-						rq->head->prev = NULL;
-				} else {
-					cur->prev->next = cur->next;
-					if (cur->next != NULL)
-						cur->next->prev = cur->prev;
-				}
-				mempool_free(&rq_mempool, cur);
-				return req;
-			}
-			return NULL;
-		}
-		cur = cur->next;
-        }
+  //      if (!rq->head) {
+  //              struct request_cell * rc = mempool_alloc(&rq_mempool);
+  //              rc->pkts_remaining = pkts_length - 1;
+  //              rc->client_id = client_id;
+  //              rc->req_id = req_id;
+  //              rc->req = mempool_alloc(&request_mempool);
+  //              rc->req->mbufs[seq_num] = pkt;
+  //              rc->req->pkts_length = pkts_length;
+  //              rc->req->type = type;
+  //              rc->next = NULL;
+  //              rc->prev = NULL;
+  //              rq->head = rc;
+  //              return NULL;
+  //      }
+	//struct request_cell * cur = rq->head;
+  //      while (cur != NULL) {
+  //              if (cur->client_id == client_id && cur->req_id == req_id) {
+  //                      cur->req->mbufs[seq_num] = pkt;
+  //                      cur->pkts_remaining--;
+	//		if (cur->pkts_remaining == 0) {
+	//			struct request * req = cur->req;
+	//			if (cur->prev == NULL) {
+	//				rq->head = cur->next;
+	//				if (rq->head != NULL)
+	//					rq->head->prev = NULL;
+	//			} else {
+	//				cur->prev->next = cur->next;
+	//				if (cur->next != NULL)
+	//					cur->next->prev = cur->prev;
+	//			}
+	//			mempool_free(&rq_mempool, cur);
+	//			return req;
+	//		}
+	//		return NULL;
+	//	}
+	//	cur = cur->next;
+  //      }
 
-        if (cur == NULL) {
-                struct request_cell * rc = mempool_alloc(&rq_mempool);
-                rc->pkts_remaining = pkts_length - 1;
-                rc->client_id = client_id;
-                rc->req_id = req_id;
-                rc->req = mempool_alloc(&request_mempool);
-                rc->req->mbufs[seq_num] = pkt;
-                rc->req->pkts_length = pkts_length;
-                rc->req->type = type;
-                rc->next = rq->head;
-		rc->next->prev = rc;
-		rc->prev = NULL;
-                rq->head = rc;
-                return NULL;
-        }
-        return NULL;
+  //      if (cur == NULL) {
+  //              struct request_cell * rc = mempool_alloc(&rq_mempool);
+  //              rc->pkts_remaining = pkts_length - 1;
+  //              rc->client_id = client_id;
+  //              rc->req_id = req_id;
+  //              rc->req = mempool_alloc(&request_mempool);
+  //              rc->req->mbufs[seq_num] = pkt;
+  //              rc->req->pkts_length = pkts_length;
+  //              rc->req->type = type;
+  //              rc->next = rq->head;
+	//	rc->next->prev = rc;
+	//	rc->prev = NULL;
+  //              rq->head = rc;
+  //              return NULL;
+  //      }
+  //      return NULL;
 }
 
 uint64_t timestamps[MAX_WORKERS];
