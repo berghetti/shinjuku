@@ -49,6 +49,8 @@ void do_networking(void)
 {
         int i, j, num_recv;
 	rqueue.head = NULL;
+	log_info("Starting with %d queue(s): %s mode\n", CFG.num_queue_settings, CFG.num_queue_settings == 1 ? "cPRESQ" : "cPREMQ");
+
         while(1) {
                 eth_process_poll();
                 num_recv = eth_process_recv();
@@ -68,8 +70,11 @@ void do_networking(void)
 			struct request * req = rq_update(&rqueue, recv_mbufs[i]);
 			if (req) {
 				networker_pointers.reqs[j] = req;
-				//networker_pointers.types[j] = (uint8_t) recv_type[i];
-				networker_pointers.types[j] = (uint8_t) req->type;
+				// if 1 cPRESQ else cPREMQ (get type from payload)
+	      if ( CFG.num_queue_settings == 1)
+					networker_pointers.types[j] = (uint8_t) recv_type[i];
+				else
+					networker_pointers.types[j] = (uint8_t) req->type;
 				j++;
 			}
                 }
