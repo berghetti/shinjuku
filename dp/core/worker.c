@@ -55,6 +55,7 @@
 
 // AFP fake work
 #include <fake_work.h>
+#include <leveldb/c.h>
 
 #define TYPE_REQ 1
 #define TYPE_RES 0
@@ -114,6 +115,73 @@ afp_server(void *buff)
 	fake_work_ns(ns_sleep);
 }
 
+extern leveldb_t 				*db;
+
+static void
+do_get ( char *key )
+{
+  size_t len;
+  char *value, *err = NULL;
+
+  leveldb_readoptions_t *readoptions = leveldb_readoptions_create ();
+
+  value = leveldb_get ( db, readoptions, key, strlen ( key ), &len, &err );
+  free ( value );
+  free ( err );
+
+  leveldb_readoptions_destroy ( readoptions );
+}
+
+static void
+do_scan ( void )
+{
+  const char *retr_key;
+  size_t len;
+
+  leveldb_readoptions_t *readoptions = leveldb_readoptions_create ();
+  leveldb_iterator_t *iter = leveldb_create_iterator ( db, readoptions );
+        
+  leveldb_iter_seek_to_first ( iter );
+  while ( leveldb_iter_valid ( iter ) )
+    {
+      retr_key = leveldb_iter_key ( iter, &len );
+      ( void ) retr_key;
+      //#ifndef NDEBUG
+      //      char *err = NULL;
+      //      char *value = leveldb_get ( db, readoptions, retr_key, len, &len,
+      //      &err ); assert ( !err ); printf ( "key:%s value:%s\n", retr_key,
+      //      value );
+      //#endif
+      leveldb_iter_next ( iter );
+    }
+        
+  leveldb_iter_destroy ( iter );
+  leveldb_readoptions_destroy ( readoptions );
+}
+
+static void
+leveldb_server ( void *buff )
+{
+#define GET 1
+#define SCAN 2
+
+  uint64_t *data = buff;
+  uint32_t type = data[3];
+  uint64_t key = data[4];
+
+  switch ( type )
+    {
+      case GET:
+        do_get ( ( char * ) &key );
+        break;
+      case SCAN:
+        //do_scan ();
+        break;
+      default:
+        assert ( 0 && "Invalid request type" );
+    }
+}
+
 /**
  * generic_work - generic function acting as placeholder for application-level
  *                work
@@ -129,7 +197,8 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
         void * data = (void *)((uint64_t) msw << 32 | lsw);
         int ret;
 
-        afp_server(data);
+        //afp_server(data);
+        leveldb_server(data);
 
         asm volatile ("cli":::);
 

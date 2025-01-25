@@ -62,6 +62,8 @@
 #include <ucontext.h>
 #include <time.h>
 
+#include <leveldb/c.h>
+
 #define MSR_RAPL_POWER_UNIT 1542
 #define ENERGY_UNIT_MASK 0x1F00
 #define ENERGY_UNIT_OFFSET 0x08
@@ -409,6 +411,9 @@ static int init_firstcpu(void)
 	return ret;
 }
 
+// Leveldb variables 
+leveldb_t 				*db;
+
 int main(int argc, char *argv[])
 {
 	int ret, i;
@@ -428,6 +433,13 @@ int main(int argc, char *argv[])
                 }
         }
         log_info("init done\n");
+	
+		
+		leveldb_options_t 		*options;
+		options  = leveldb_options_create();
+		char *err = NULL;
+		db = leveldb_open(options, "/tmpfs/my_db", &err);
+		assert(!err);
 
         do_dispatching(CFG.num_cpus);
 	log_info("finished handling contexts, looping forever...\n");

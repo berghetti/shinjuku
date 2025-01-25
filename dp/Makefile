@@ -32,11 +32,15 @@ DPDK_INC = -I$(DPDK)/build/include -I$(DPDK)/lib/librte_eal/common -I$(DPDK)/dri
 INC	= -I../inc -I$(DUNE)/libdune -I../inc/lwip -I../inc/lwip/ipv4 -I../inc/lwip/ipv6 $(DPDK_INC) -include$(DUNE)/kern/dune.h
 INC	+= -I$(PCIDMA)
 INC	+= -I$(AFP_DIR)/deps/fake-work
+INC += -I$(AFP_DIR)/deps/leveldb/include
 CC	= gcc
 CFLAGS	= -g -Wall -fno-pie -fno-dwarf2-cfi-asm -fno-asynchronous-unwind-tables -O3 -mno-red-zone $(INC) -D__KERNEL__ $(EXTRA_CFLAGS)
-LD	= gcc
+LD	= g++
 LDFLAGS	= -T ix.ld -no-pie
 LDLIBS	= -lrt -lpthread -lm -lnuma -ldl -lconfig
+
+LEVELDB_LIB=$(AFP_DIR)/deps/leveldb/build/libleveldb.a
+LDLIBS += $(LEVELDB_LIB) -lgflags -lsnappy -lz -llz4
 
 ifneq ($(DEBUG),)
 CFLAGS += -DDEBUG
@@ -56,7 +60,7 @@ endef
 include $(patsubst %, %/dir.mk, $(DIRS))
 
 %.generated.S: %.c
-	$(CC) $(CFLAGS) -o $@ -S $<
+	$(CXX) $(CFLAGS) -o $@ -S $<
 
 all: shinjuku
 
