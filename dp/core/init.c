@@ -439,7 +439,7 @@ int main(int argc, char *argv[])
 		options  = leveldb_options_create();
 		char *err = NULL;
 		db = leveldb_open(options, "/tmpfs/my_db", &err);
-		assert(!err);
+		//assert(!err);
 
         do_dispatching(CFG.num_cpus);
 	log_info("finished handling contexts, looping forever...\n");

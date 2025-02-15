@@ -109,7 +109,7 @@ afp_server(void *buff)
 	uint64_t *data = buff;
 
 	//uint32_t type = data[3];
-	uint32_t ns_sleep = data[5];
+	uint32_t ns_sleep = data[4];
   //printf("%d\n", ns_sleep);
 	
 	fake_work_ns(ns_sleep);
@@ -197,8 +197,8 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
         void * data = (void *)((uint64_t) msw << 32 | lsw);
         int ret;
 
-        //afp_server(data);
-        leveldb_server(data);
+        afp_server(data);
+        //leveldb_server(data);
 
         asm volatile ("cli":::);
 
