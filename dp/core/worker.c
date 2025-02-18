@@ -66,6 +66,15 @@ __thread ucontext_t * cont;
 __thread int cpu_nr_;
 __thread volatile uint8_t finished;
 
+#ifdef USE_CI
+int __thread concord_preempt_now = 0;
+
+void concord_func(void)
+{
+  swapcontext_fast_to_control(cont, &uctx_main);
+}
+#endif
+
 DEFINE_PERCPU(struct mempool, response_pool __attribute__((aligned(64))));
 
 extern int getcontext_fast(ucontext_t *ucp);
@@ -248,7 +257,11 @@ static inline void init_worker(void)
 {
         cpu_nr_ = percpu_get(cpu_nr) - 2;
         worker_responses[cpu_nr_].flag = PROCESSED;
+#ifdef USE_CI
+        register_worker(cpu_nr_, &concord_preempt_now);
+#else
         dune_register_intr_handler(PREEMPT_VECTOR, test_handler);
+#endif
         eth_process_reclaim();
         asm volatile ("cli":::);
 }

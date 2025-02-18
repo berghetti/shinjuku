@@ -31,6 +31,20 @@
 #include <ix/context.h>
 #include <ix/dispatch.h>
 
+#ifdef USE_CI
+
+static int *workers_concord_flag[MAX_WORKERS];
+
+
+void
+register_worker(uint8_t w, int *flag_pointer)
+{
+        workers_concord_flag[w] = flag_pointer;
+        printf("Registred worker %d\n", w);
+}
+
+#endif
+
 extern void dune_apic_send_posted_ipi(uint8_t vector, uint32_t dest_core);
 
 #define PREEMPT_VECTOR 0xf2
@@ -107,7 +121,11 @@ static inline void preempt_worker(int i, uint64_t cur_time)
         if (preempt_check[i] && (((cur_time - timestamps[i]) / 2.5) > CFG.preemption_delay)) {
                 // Avoid preempting more times.
                 preempt_check[i] = false;
+#ifdef USE_CI
+                workers_concord_flag[i] = 1;
+#else
                 dune_apic_send_posted_ipi(PREEMPT_VECTOR, CFG.cpu[i + 2]);
+#endif
         }
 }
 
