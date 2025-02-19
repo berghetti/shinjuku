@@ -40,7 +40,6 @@ void
 register_worker(uint8_t w, int *flag_pointer)
 {
         workers_concord_flag[w] = flag_pointer;
-        printf("Registred worker %d\n", w);
 }
 
 #endif
@@ -122,7 +121,7 @@ static inline void preempt_worker(int i, uint64_t cur_time)
                 // Avoid preempting more times.
                 preempt_check[i] = false;
 #ifdef USE_CI
-                workers_concord_flag[i] = 1;
+                *workers_concord_flag[i] = 1;
 #else
                 dune_apic_send_posted_ipi(PREEMPT_VECTOR, CFG.cpu[i + 2]);
 #endif

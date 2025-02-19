@@ -42,6 +42,10 @@ LDLIBS	= -lrt -lpthread -lm -lnuma -ldl -lconfig
 LEVELDB_LIB=$(AFP_DIR)/deps/leveldb/build/libleveldb.a
 LDLIBS += $(LEVELDB_LIB) -lgflags -lsnappy -lz -llz4
 
+ifneq ($(USE_CI),)
+CFLAGS += -DUSE_CI
+endif
+
 ifneq ($(DEBUG),)
 CFLAGS += -DDEBUG
 endif
@@ -86,7 +90,11 @@ DPDK_LIBS+=$(DPDK)/build/lib/librte_eal.a
 DPDK_LIBS+=$(DPDK)/build/lib/librte_mempool.a
 DPDK_LIBS+=$(DPDK)/build/lib/librte_ring.a
 
+ifneq ($(USE_CI),)
+AFP_FAKE_WORK_LIB=$(AFP_DIR)/deps/fake-work/libfakework_concord.a
+else
 AFP_FAKE_WORK_LIB=$(AFP_DIR)/deps/fake-work/libfakework.a
+endif
 
 shinjuku: $(DEPENDENCY) $(OBJS) $(DUNE_LIB) ix.ld
 	$(LD) $(LDFLAGS) -o shinjuku $(OBJS) $(DUNE_LIB) $(DPDK_LIBS) $(AFP_FAKE_WORK_LIB) $(LDLIBS)

@@ -71,6 +71,7 @@ int __thread concord_preempt_now = 0;
 
 void concord_func(void)
 {
+  concord_preempt_now = 0;
   swapcontext_fast_to_control(cont, &uctx_main);
 }
 #endif
