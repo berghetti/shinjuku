@@ -414,6 +414,25 @@ static int init_firstcpu(void)
 // Leveldb variables 
 leveldb_t 				*db;
 
+static void
+leveldb_init ( void )
+{
+  // Initialize levelDB
+  leveldb_options_t *options = leveldb_options_create ();
+
+  // open DB
+  char *err = NULL;
+  const char *DBPath = "/tmpfs/my_db";
+  db = leveldb_open ( options, DBPath, &err );
+  if ( err )
+    {
+      fprintf ( stderr,
+                "Error to open database:\n%s\n",
+                err );
+      exit ( 1 );
+    }
+}
+
 int main(int argc, char *argv[])
 {
 	int ret, i;
@@ -435,14 +454,16 @@ int main(int argc, char *argv[])
         log_info("init done\n");
 	
 		
-		leveldb_options_t 		*options;
-		options  = leveldb_options_create();
-		char *err = NULL;
-		db = leveldb_open(options, "/tmpfs/my_db", &err);
-		//assert(!err);
+#ifdef DB
+	leveldb_init();
+#endif
 
         do_dispatching(CFG.num_cpus);
 	log_info("finished handling contexts, looping forever...\n");
+
+#ifdef DB
+	leveldb_close ( db );
+#endif
 	return 0;
 }
 
