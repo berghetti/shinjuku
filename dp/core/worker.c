@@ -68,9 +68,25 @@ __thread volatile uint8_t finished;
 
 #ifdef USE_CI
 int __thread concord_preempt_now = 0;
+__thread int concord_lock_counter;
+
+void
+concord_enable(void){
+  concord_lock_counter += 1;
+}
+
+void
+concord_disable(void){
+  concord_lock_counter -= 1;
+}
 
 void concord_func(void)
 {
+  if(concord_lock_counter != 0)
+    {
+      return;
+    }
+
   concord_preempt_now = 0;
   swapcontext_fast_to_control(cont, &uctx_main);
 }
@@ -177,7 +193,7 @@ leveldb_server ( void *buff )
 
   uint64_t *data = buff;
   uint32_t type = data[3];
-  uint64_t key = data[4];
+  uint64_t key = data[5];
 
   switch ( type )
     {
@@ -185,7 +201,7 @@ leveldb_server ( void *buff )
         do_get ( ( char * ) &key );
         break;
       case SCAN:
-        //do_scan ();
+        do_scan ();
         break;
       default:
         assert ( 0 && "Invalid request type" );
@@ -207,8 +223,11 @@ static void generic_work(uint32_t msw, uint32_t lsw, uint32_t msw_id,
         void * data = (void *)((uint64_t) msw << 32 | lsw);
         int ret;
 
+#ifdef DB
+        leveldb_server(data);
+#else
         afp_server(data);
-        //leveldb_server(data);
+#endif
 
         asm volatile ("cli":::);
 
