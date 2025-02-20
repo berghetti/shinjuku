@@ -71,12 +71,12 @@ int __thread concord_preempt_now = 0;
 __thread int concord_lock_counter;
 
 void
-concord_enable(void){
+concord_enable(){
   concord_lock_counter += 1;
 }
 
 void
-concord_disable(void){
+concord_disable(){
   concord_lock_counter -= 1;
 }
 
