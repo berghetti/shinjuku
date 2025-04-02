@@ -1,7 +1,8 @@
 #!/bin/sh
 
 make clean
-make -sj64 USE_CI=1
+#make -sj64 USE_CI=1
+make -sj64 USE_CI=1 DB=1
 mv ./dp/shinjuku ./dp/shinjuku-ci
 #./dp/shinjuku-ci
 
